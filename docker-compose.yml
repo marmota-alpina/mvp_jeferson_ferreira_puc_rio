@@ -106,7 +106,7 @@ services:
     build:
       context: ./product_hub_ui
       dockerfile: Dockerfile
-    container_name: product_hub_ui_traefik
+    container_name: product-hub-ui-traefik
     depends_on:
       - product-hub
     ports:

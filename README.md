@@ -41,3 +41,15 @@ docker-compose up --build
 
 ### Accessar o traefik
 - [http://localhost:8081](http://localhost:8081) Dashboard do Traefik
+
+## Limpando o ambiente
+Para limpar o ambiente, execute o comando abaixo:
+```bash
+  docker-compose down
+```
+```bash
+  docker rm -f $(docker ps -aq)
+  docker rmi -f $(docker images -q)
+  docker volume rm $(docker volume ls -q)
+```
+
