@@ -1,0 +1,118 @@
+services:
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8081:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  address_postgres_traefik:
+    build:
+      context: ./address_db
+      dockerfile: Dockerfile
+    container_name: address_postgres_traefik
+    env_file:
+      - address_db/.env
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_address_data_traefik:/var/lib/postgresql/data
+
+  jedex_postgres_traefik:
+    image: postgres:latest
+    container_name: jedex_postgres_traefik
+    env_file:
+      - jedex_db/.env
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_jedex_data_traefik:/var/lib/postgresql/data
+
+  product_hub_postgres_traefik:
+    build:
+      context: ./product_hub_db
+      dockerfile: Dockerfile
+    container_name: product_hub_postgres_traefik
+    env_file:
+      - product_hub_db/.env
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_product_hub_data_traefik:/var/lib/postgresql/data
+
+  address_api:
+    build:
+      context: ./address_api
+      dockerfile: Dockerfile
+    container_name: address_api_traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.address-docs.rule=PathPrefix(`/address`)"
+      - "traefik.http.routers.address-docs.service=address-docs-service"
+      - "traefik.http.services.address-docs-service.loadbalancer.server.port=8000"
+    depends_on:
+      - address_postgres_traefik
+    env_file:
+      - address_api/.env
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+
+  jedex:
+    build:
+      context: ./jedex_api
+      dockerfile: Dockerfile
+    container_name: jedex_api_traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jedex-docs.rule=PathPrefix(`/jedex`)"
+      - "traefik.http.routers.jedex-docs.service=jedex-docs-service"
+      - "traefik.http.services.jedex-docs-service.loadbalancer.server.port=8000"
+    depends_on:
+      - jedex_postgres_traefik
+    env_file:
+      - jedex_api/.env
+
+  product-hub:
+    build:
+      context: ./product_hub_api
+      dockerfile: Dockerfile
+    container_name: product_hub_api_traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.product-hub-docs.rule=PathPrefix(`/product-hub`)"
+      - "traefik.http.routers.product-hub-docs.service=product-hub-docs-service"
+      - "traefik.http.services.product-hub-docs-service.loadbalancer.server.port=8000"
+    depends_on:
+      - product_hub_postgres_traefik
+    env_file:
+      - product_hub_api/.env
+
+  jedex-ui:
+    build:
+      context: ./jedex_ui
+      dockerfile: Dockerfile
+    container_name: jedex_ui_traefik
+    depends_on:
+      - jedex
+    ports:
+      - "4000:80"
+
+  product-hub-ui:
+    build:
+      context: ./product_hub_ui
+      dockerfile: Dockerfile
+    container_name: product_hub_ui_traefik
+    depends_on:
+      - product-hub
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_address_data_traefik:
+  postgres_jedex_data_traefik:
+  postgres_product_hub_data_traefik:
